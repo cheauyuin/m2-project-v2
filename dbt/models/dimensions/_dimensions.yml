@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: >
+      Date dimension spanning 2015-01-01 to 2023-01-15. Includes UK bank holidays,
+      external disruption events, season, weekend flag, and nightlife day flag.
+    columns:
+      - name: date_id
+        description: "Integer surrogate key in YYYYMMDD format"
+        tests: [not_null, unique]
+      - name: date
+        tests: [not_null, unique]
+      - name: season
+        tests:
+          - accepted_values:
+              values: ['Winter', 'Spring', 'Summer', 'Autumn']
+      - name: disruption_type
+        tests:
+          - accepted_values:
+              values: ['lockdown', 'lockdown_ease', 'royal_event', 'bank_holiday', 'strike', null]
+
+  - name: dim_station
+    description: >
+      Station dimension from cycle_stations enriched with lifetime flow metrics.
+      is_structural_imbalance flags stations with persistent ±10%+ net flow imbalance
+      (e.g. Waterloo +16%, Hop Exchange −15%) that require daily van redistribution.
+    columns:
+      - name: station_id
+        tests: [not_null, unique]
+      - name: flow_role
+        tests:
+          - accepted_values:
+              values: ['source', 'sink', 'balanced']
+      - name: imbalance_pct
+        description: "Positive = net source (bikes leave); negative = net sink (bikes accumulate)"
+
+  - name: dim_bike
+    description: >
+      One row per bike_id. Aggregates full rental history for maintenance and
+      retirement planning. Bikes with total_rentals > 5,000 or hours > 2,000
+      and no workshop records are flagged exceeds_retirement_threshold.
+    columns:
+      - name: bike_id
+        tests: [not_null, unique]
+      - name: model_category
+        tests:
+          - accepted_values:
+              values: ['E-Bike', 'Classic', 'Unknown']

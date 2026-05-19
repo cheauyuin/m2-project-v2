@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: mart_station_demand
+    description: >
+      Hourly departure/arrival/net-flow per station, split by weekday vs weekend.
+      is_structural_imbalance identifies stations requiring daily van redistribution
+      (e.g. Waterloo +16%, Hop Exchange −15% over 8 years).
+
+  - name: mart_monthly_trends
+    description: >
+      Monthly KPIs with trip segment breakdown, anomaly flags, and MoM delta.
+      is_disrupted_month joins to external_events to contextualise anomalous drops.
+      duration_anomaly_flag triggers when avg duration changes > 15% MoM.
+
+  - name: mart_nightlife_demand
+    description: >
+      Fri/Sat 00:00–04:00 segment. Reveals the hidden third market (Surprise §3.2):
+      Saturday midnight has 210k rentals — 2.3× Tuesday midnight.
+      Used to pre-position bikes near nightlife hubs before midnight.
+
+  - name: mart_bike_utilisation
+    description: >
+      Cumulative rental count and hours per bike. is_high_risk_no_maintenance flags
+      bikes over retirement thresholds with no workshop record (Surprise §3.4).
+
+  - name: mart_maintenance_trips
+    description: >
+      Workshop-destination records separated from customer journeys (Surprise §3.1).
+      Avg workshop custody: 131–178 hrs. Max: 65.3 days (bike #60353).
+
+  - name: mart_route_volume
+    description: >
+      Origin-destination pairs ranked by volume, with straight-line distance (km).
+      Top routes are all Hyde Park leisure circuits (30k–33k trips each).

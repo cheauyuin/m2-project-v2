@@ -1,0 +1,22 @@
+london_bicycles:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: m2-dataset-study
+      dataset: london_bicycles_dev
+      location: EU          # REQUIRED — source data is EU multi-region
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+
+    prod:
+      type: bigquery
+      method: oauth
+      project: m2-dataset-study
+      dataset: london_bicycles
+      location: EU
+      threads: 8
+      timeout_seconds: 600
+      priority: batch

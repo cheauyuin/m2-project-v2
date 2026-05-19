@@ -1,0 +1,9 @@
+.DS_Store
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+notebooks/.ipynb_checkpoints/
+notebooks/Untitled.ipynb
+__pycache__/
+*.pyc

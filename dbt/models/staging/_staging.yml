@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_cycle_hire
+    description: >
+      Cleaned and flagged rental transactions. All anomaly types are flagged but
+      kept — nothing is silently dropped. Downstream models filter by flags as needed.
+      Drops: duration_ms (redundant), terminal columns (99.7% NULL).
+    columns:
+      - name: rental_id
+        tests: [not_null, unique]
+      - name: duration_sec
+        description: "NULL for incomplete trips only"
+      - name: is_incomplete_trip
+        description: "TRUE when duration IS NULL AND end_date IS NULL (bike never returned)"
+      - name: is_invalid_duration
+        description: "TRUE when duration <= 0 (system error)"
+      - name: is_maintenance_trip
+        description: "TRUE when end_station_name contains 'workshop'"
+      - name: is_anomalous_duration
+        description: "TRUE when duration > 86,400 sec AND not a maintenance trip"
+      - name: is_missing_end_id
+        description: "TRUE when end_station_id NULL but end_station_name present (resolvable)"
+      - name: is_ghost_end
+        description: "TRUE when end_date present but no station info at all (203 records)"
+      - name: is_unknown_bike
+        description: "TRUE when bike_id IS NULL (15 records, Jun 2017 glitch)"
+
+  - name: stg_stations
+    description: >
+      Cleaned station metadata. Flags capacity errors and missing install dates.
+    columns:
+      - name: id
+        tests: [not_null, unique]
+      - name: has_capacity_error
+        description: "TRUE for 2 stations where docks_count = 0"
+      - name: install_date_unknown
+        description: "TRUE for 88 stations where install_date IS NULL"

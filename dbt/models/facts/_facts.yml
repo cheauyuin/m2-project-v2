@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: fact_rentals
+    description: >
+      Central fact table. ~78M clean customer rental records, partitioned by
+      start_date (month) and clustered by start/end station for query performance.
+      Excludes: invalid duration, incomplete trips, maintenance trips, ghost records.
+      Retains anomalous_duration and missing_end_id with flags for transparency.
+    columns:
+      - name: rental_id
+        tests: [not_null, unique]
+      - name: duration_sec
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+      - name: trip_segment
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['commute_am', 'commute_pm', 'leisure', 'nightlife', 'night', 'daytime']
+      - name: start_date
+        tests: [not_null]
+      - name: date_id
+        tests: [not_null]

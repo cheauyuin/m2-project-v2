@@ -1,0 +1,45 @@
+name: london_bicycles
+version: '1.0.0'
+config-version: 2
+
+profile: london_bicycles
+
+model-paths: ["models"]
+seed-paths:  ["seeds"]
+test-paths:  ["tests"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  start_date: '2015-01-01'
+  end_date:   '2023-01-15'
+  # Duration cap for customer analytics (seconds) — see report §4.4
+  duration_cap_sec: 86400
+  # Retirement threshold for bikes
+  bike_retirement_rentals: 5000
+  bike_retirement_hours:   2000
+
+models:
+  london_bicycles:
+    staging:
+      +materialized: view
+      +schema: staging
+
+    dimensions:
+      +materialized: table
+      +schema: dimensions
+
+    facts:
+      +materialized: incremental
+      +schema: facts
+      +partition_by:
+        field: start_date
+        data_type: timestamp
+        granularity: month
+      +cluster_by: [start_station_id, end_station_id]
+
+    marts:
+      +materialized: table
+      +schema: marts

@@ -1,0 +1,43 @@
+version: 2
+
+sources:
+  - name: london_bicycles
+    database: bigquery-public-data
+    schema: london_bicycles
+    description: "TfL Santander Cycles public dataset — 83.4M records, Jan 2015 to Jan 2023"
+    tables:
+      - name: cycle_hire
+        description: "Individual rental transactions"
+        columns:
+          - name: rental_id
+            description: "Unique rental identifier"
+            tests: [not_null, unique]
+          - name: duration
+            description: "Trip duration in seconds (NULL = incomplete trip)"
+          - name: bike_id
+            description: "Bike frame identifier (15 NULLs in Jun 2017)"
+          - name: start_date
+            description: "Trip start timestamp"
+            tests: [not_null]
+          - name: end_date
+            description: "Trip end timestamp (NULL when bike never returned)"
+          - name: start_station_id
+            description: "Departure station ID (229,639 NULLs, all in Aug–Sep 2016 window)"
+          - name: end_station_id
+            description: "Arrival station ID (561,504 NULLs — three sub-patterns)"
+
+      - name: cycle_stations
+        description: "Docking station metadata snapshot"
+        columns:
+          - name: id
+            tests: [not_null, unique]
+
+  - name: reference
+    database: m2-dataset-study
+    schema: london_bicycles_ref
+    description: "Manually curated reference tables"
+    tables:
+      - name: external_events
+        description: "Known external disruptions affecting rental volume"
+      - name: uk_bank_holidays
+        description: "UK public holidays 2015–2023"
