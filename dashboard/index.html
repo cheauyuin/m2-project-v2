@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>London Cycles — Five Stories, One Fleet</title>
+
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+
+<style>
+:root {
+  --navy: #0d1b4b;
+  --blue: #2e86ab;
+  --orange: #f18f01;
+  --purple: #6c3483;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --grey: #95a5a6;
+  --bg: #f8f9fa;
+  --card: #ffffff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: #1a1a2e;
+  scroll-behavior: smooth;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: var(--navy);
+  display: flex; align-items: center; gap: 0;
+  padding: 0 32px; height: 52px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+nav .logo {
+  font-size: 15px; font-weight: 700; color: white;
+  margin-right: 32px; white-space: nowrap;
+}
+nav a {
+  color: rgba(255,255,255,0.65); text-decoration: none;
+  font-size: 13px; padding: 0 14px; height: 52px;
+  display: flex; align-items: center;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+nav a:hover, nav a.active {
+  color: white; border-bottom-color: var(--orange);
+}
+
+/* ── HERO ── */
+#hero {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  background: linear-gradient(135deg, var(--navy) 0%, #1a3a6b 100%);
+  padding: 80px 32px 40px;
+}
+#hero h1 {
+  font-size: clamp(32px, 5vw, 60px); font-weight: 800;
+  color: white; line-height: 1.15; max-width: 800px;
+}
+#hero h1 span { color: var(--orange); }
+#hero p {
+  font-size: 18px; color: rgba(255,255,255,0.75);
+  margin: 20px 0 40px; max-width: 600px; line-height: 1.6;
+}
+.stats-row {
+  display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 48px;
+}
+.stat-card {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px; padding: 20px 28px; text-align: center;
+  backdrop-filter: blur(8px);
+}
+.stat-card .num { font-size: 32px; font-weight: 800; color: var(--orange); }
+.stat-card .lbl { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+.scroll-hint {
+  color: rgba(255,255,255,0.4); font-size: 13px;
+  animation: bounce 2s infinite;
+}
+@keyframes bounce {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* ── SECTIONS ── */
+section {
+  min-height: 100vh; padding: 80px 32px 60px;
+  display: flex; flex-direction: column; align-items: center;
+}
+section:nth-child(odd) { background: var(--bg); }
+section:nth-child(even) { background: #eef2f7; }
+
+.section-inner {
+  width: 100%; max-width: 1100px;
+}
+.chapter-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--orange);
+  margin-bottom: 8px;
+}
+.section-title {
+  font-size: clamp(22px, 3vw, 36px); font-weight: 800;
+  color: var(--navy); margin-bottom: 12px; line-height: 1.2;
+}
+.section-desc {
+  font-size: 15px; color: #4b5563; line-height: 1.7;
+  max-width: 680px; margin-bottom: 28px;
+}
+.card {
+  background: var(--card); border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  padding: 24px; margin-bottom: 20px;
+}
+.controls {
+  display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: var(--navy); color: white;
+}
+.btn-primary:hover { background: #1a3a6b; }
+.btn-outline {
+  background: transparent; color: var(--navy);
+  border: 2px solid var(--navy);
+}
+.btn-outline:hover { background: var(--navy); color: white; }
+.btn.active { background: var(--orange); color: white; border-color: var(--orange); }
+
+.chart-container { width: 100%; min-height: 400px; }
+.map-container { width: 100%; height: 460px; border-radius: 12px; overflow: hidden; }
+
+/* ── SEARCH ── */
+.search-wrap { position: relative; max-width: 300px; }
+.search-wrap input {
+  width: 100%; padding: 9px 14px 9px 36px;
+  border: 2px solid #e5e7eb; border-radius: 8px;
+  font-size: 13px; outline: none; transition: border 0.2s;
+}
+.search-wrap input:focus { border-color: var(--navy); }
+.search-wrap::before {
+  content: '🔍'; position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%); font-size: 14px;
+}
+
+/* ── RISK TABLE ── */
+#risk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#risk-table th {
+  background: var(--navy); color: white;
+  padding: 10px 12px; text-align: left;
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
+}
+#risk-table th:hover { background: #1a3a6b; }
+#risk-table td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; }
+#risk-table tr.high-risk td { background: #fff5f5; }
+#risk-table tr.over-threshold td { background: #fffbeb; }
+#risk-table tr:hover td { filter: brightness(0.97); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 700;
+}
+.badge.red { background: #fee2e2; color: #b91c1c; }
+.badge.yellow { background: #fef3c7; color: #92400e; }
+.badge.green { background: #d1fae5; color: #065f46; }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--navy); color: rgba(255,255,255,0.5);
+  text-align: center; padding: 32px; font-size: 13px;
+}
+
+/* ── ANIMATIONS ── */
+.fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s, transform 0.6s; }
+.fade-in.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">🚲 London Cycles</div>
+  <a href="#ch1">01 Demand</a>
+  <a href="#ch2">02 Flow</a>
+  <a href="#ch3">03 Seasons</a>
+  <a href="#ch4">04 Nightlife</a>
+  <a href="#ch5">05 Risk</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <h1>Five Stories,<br><span>One Fleet</span></h1>
+  <p>Eight years of London Santander Cycles data — distilled into five interactive insights about demand, flow, seasons, nightlife, and bike safety.</p>
+  <div class="stats-row">
+    <div class="stat-card"><div class="num">8</div><div class="lbl">Years of data</div></div>
+    <div class="stat-card"><div class="num">800+</div><div class="lbl">Stations</div></div>
+    <div class="stat-card"><div class="num">2.3×</div><div class="lbl">Sat vs Tue midnight</div></div>
+    <div class="stat-card"><div class="num">1,000+</div><div class="lbl">Bikes past retirement</div></div>
+  </div>
+  <div class="scroll-hint">↓ Scroll to explore</div>
+</section>
+
+<!-- CH1: DEMAND -->
+<section id="ch1">
+  <div class="section-inner fade-in">
+    <div class="chapter-label">Chapter 01 — Demand Patterns</div>
+    <h2 class="section-title">Two Markets, One Fleet</h2>
+    <p class="section-desc">Weekdays are shaped by commuters — sharp spikes at 8am and 6pm. Weekends are flat and leisure-driven. Toggle between them to see two completely different demand profiles sharing the same bikes.</p>
+    <div class="card">
+      <div class="controls">
+        <button class="btn btn-primary active" id="btn-weekday" onclick="showDemand('Weekday')">Weekday</button>
+        <button class="btn btn-outline" id="btn-weekend" onclick="showDemand('Weekend')">Weekend</button>
+      </div>
+      <div id="demand-chart" class="chart-container"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CH2: STATION FLOW -->
+<section id="ch2">
+  <div class="section-inner fade-in">
+    <div class="chapter-label">Chapter 02 — Station Flow</div>
+    <h2 class="section-title">The Redistribution Problem</h2>
+    <p class="section-desc">Some stations persistently drain bikes (sources); others overflow (sinks). Vans must constantly rebalance the network. Click a marker to inspect any station. Use the filter to isolate the worst offenders.</p>
+    <div class="card">
+      <div class="controls">
+        <button class="btn btn-primary active" id="btn-all-stations" onclick="filterStations('all')">All stations</button>
+        <button class="btn btn-outline" id="btn-top15" onclick="filterStations('top15')">Top 15 imbalanced</button>
+      </div>
+      <div id="station-map" class="map-container"></div>
+      <div style="display:flex;gap:20px;margin-top:12px;font-size:13px;flex-wrap:wrap;">
+        <span>🔴 Source (net outflow)</span>
+        <span>🔵 Sink (net inflow)</span>
+        <span>⚫ Balanced</span>
+        <span style="color:#888">· Marker size = imbalance magnitude</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CH3: SEASONALITY -->
+<section id="ch3">
+  <div class="section-inner fade-in">
+    <div class="chapter-label">Chapter 03 — Seasonality</div>
+    <h2 class="section-title">Eight Years of Seasons</h2>
+    <p class="section-desc">A 3× swing between summer peaks and winter lows. COVID lockdowns triggered a leisure surge in 2020. The Queen's death caused a measurable dip in September 2022. Hover disrupted months to read the event label.</p>
+    <div class="card">
+      <div id="seasonal-chart" class="chart-container"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CH4: NIGHTLIFE -->
+<section id="ch4">
+  <div class="section-inner fade-in">
+    <div class="chapter-label">Chapter 04 — Nightlife Segment</div>
+    <h2 class="section-title">The Third Market: Nightlife</h2>
+    <p class="section-desc">Saturday midnight sees 2.3× more rentals than Tuesday — a distinct third market invisible in aggregate stats. The map shows where to pre-position bikes before midnight on Friday.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="card">
+        <div id="nightlife-chart" class="chart-container" style="min-height:320px;"></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="nightlife-map" class="map-container" style="height:100%;min-height:320px;border-radius:16px;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CH5: BIKE RISK -->
+<section id="ch5">
+  <div class="section-inner fade-in">
+    <div class="chapter-label">Chapter 05 — Bike Utilisation</div>
+    <h2 class="section-title">The Risk Register</h2>
+    <p class="section-desc">Over 1,000 bikes exceed retirement thresholds. The most alarming have zero workshop records. Search any bike ID or click a point to highlight it in the table below.</p>
+    <div class="card">
+      <div class="controls">
+        <div class="search-wrap">
+          <input type="text" id="bike-search" placeholder="Search bike ID…" oninput="filterTable()">
+        </div>
+        <button class="btn btn-outline" onclick="filterRisk('all')">All bikes</button>
+        <button class="btn btn-outline" onclick="filterRisk('high')">High risk only</button>
+      </div>
+      <div id="bike-chart" class="chart-container" style="min-height:380px;"></div>
+    </div>
+    <div class="card" style="overflow-x:auto;padding:0;">
+      <table id="risk-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">Bike ID ↕</th>
+            <th onclick="sortTable(1)">Total Rentals ↕</th>
+            <th onclick="sortTable(2)">Hours Ridden ↕</th>
+            <th onclick="sortTable(3)">Rentals/Day ↕</th>
+            <th onclick="sortTable(4)">Lifespan (days) ↕</th>
+            <th>Workshop Record</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
+        <tbody id="risk-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<footer>
+  London Santander Cycles · M2 Project · Built with Plotly.js & Leaflet.js
+</footer>
+
+<script>
+// ── SCROLL ANIMATIONS ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Active nav on scroll
+const sections = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) cur = s.id; });
+  document.querySelectorAll('nav a').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + cur);
+  });
+});
+
+// ── CH1: DEMAND HEATMAP ──
+function showDemand(dayType) {
+  const rows = DATA.demand.filter(d => d.day_type === dayType);
+  const hours = rows.map(d => d.hour_of_day);
+  const vals = rows.map(d => d.total_departures);
+  const color = dayType === 'Weekday' ? 'Blues' : 'Oranges';
+
+  Plotly.react('demand-chart', [{
+    type: 'bar', x: hours, y: vals,
+    marker: { color: vals, colorscale: color, showscale: false },
+    hovertemplate: 'Hour %{x}:00<br>Departures: %{y:,}<extra></extra>'
+  }], {
+    xaxis: { title: 'Hour of Day', tickmode: 'linear', dtick: 1, range: [-0.5, 23.5] },
+    yaxis: { title: 'Total Departures', tickformat: ',.0f' },
+    margin: { t: 10, r: 20, b: 50, l: 70 },
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent'
+  }, { responsive: true });
+
+  document.getElementById('btn-weekday').className = 'btn ' + (dayType === 'Weekday' ? 'btn-primary active' : 'btn-outline');
+  document.getElementById('btn-weekend').className = 'btn ' + (dayType === 'Weekend' ? 'btn-primary active' : 'btn-outline');
+}
+
+// ── CH2: STATION MAP ──
+let stationMap, allMarkers = [], top15Ids = new Set();
+
+function initStationMap() {
+  stationMap = L.map('station-map').setView([51.505, -0.11], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 18
+  }).addTo(stationMap);
+
+  const sorted = [...DATA.stations].sort((a, b) => Math.abs(b.net_outflow) - Math.abs(a.net_outflow));
+  sorted.slice(0, 15).forEach(s => top15Ids.add(s.station_name));
+
+  DATA.stations.forEach(s => {
+    if (!s.latitude || !s.longitude) return;
+    const imb = Math.abs(s.net_outflow || 0);
+    const r = Math.max(5, Math.min(22, imb / 800));
+    const color = s.flow_role === 'source' ? '#e74c3c' : s.flow_role === 'sink' ? '#2e86ab' : '#95a5a6';
+    const m = L.circleMarker([s.latitude, s.longitude], {
+      radius: r, fillColor: color, color: '#fff',
+      weight: 1.5, fillOpacity: 0.8
+    }).addTo(stationMap);
+    m.bindPopup(`
+      <strong>${s.station_name}</strong><br>
+      Role: <b>${s.flow_role || 'balanced'}</b><br>
+      Net outflow: ${(s.net_outflow || 0).toLocaleString()}<br>
+      Imbalance: ${s.imbalance_pct || 0}%<br>
+      Departures: ${(s.total_departures || 0).toLocaleString()}<br>
+      Arrivals: ${(s.total_arrivals || 0).toLocaleString()}
+    `);
+    m._stationName = s.station_name;
+    allMarkers.push(m);
+  });
+}
+
+function filterStations(mode) {
+  allMarkers.forEach(m => {
+    const show = mode === 'all' || top15Ids.has(m._stationName);
+    m.setStyle({ fillOpacity: show ? 0.8 : 0.08, opacity: show ? 1 : 0.15 });
+  });
+  document.getElementById('btn-all-stations').className = 'btn ' + (mode === 'all' ? 'btn-primary active' : 'btn-outline');
+  document.getElementById('btn-top15').className = 'btn ' + (mode === 'top15' ? 'btn-primary active' : 'btn-outline');
+}
+
+// ── CH3: SEASONALITY ──
+function initSeasonalChart() {
+  const months = DATA.monthly.map(d => d.month);
+  const rentals = DATA.monthly.map(d => d.total_rentals);
+  const disrupted = DATA.monthly.filter(d => d.is_disrupted_month);
+
+  const traces = [
+    {
+      x: months, y: rentals, type: 'scatter', mode: 'lines',
+      line: { color: '#2e86ab', width: 2.5 },
+      name: 'Monthly rentals',
+      hovertemplate: '%{x}<br>Rentals: %{y:,}<extra></extra>'
+    },
+    {
+      x: disrupted.map(d => d.month),
+      y: disrupted.map(d => d.total_rentals),
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#e74c3c', size: 10, symbol: 'circle' },
+      name: 'Disrupted month',
+      text: disrupted.map(d => d.disruption_type || 'Disruption'),
+      hovertemplate: '%{x}<br>%{text}<br>Rentals: %{y:,}<extra></extra>'
+    }
+  ];
+
+  Plotly.newPlot('seasonal-chart', traces, {
+    xaxis: { title: 'Month', rangeslider: {} },
+    yaxis: { title: 'Total Rentals', tickformat: ',.0f' },
+    legend: { orientation: 'h', y: -0.25 },
+    margin: { t: 10, r: 20, b: 80, l: 80 },
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent'
+  }, { responsive: true });
+}
+
+// ── CH4: NIGHTLIFE ──
+function initNightlifeChart() {
+  const order = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const sorted = [...DATA.nightlife_dow].sort((a, b) => order.indexOf(a.day_name) - order.indexOf(b.day_name));
+  const colors = sorted.map(d => ['Friday','Saturday','Sunday'].includes(d.day_name) ? '#6c3483' : '#bdc3c7');
+
+  Plotly.newPlot('nightlife-chart', [{
+    type: 'bar',
+    x: sorted.map(d => d.day_name),
+    y: sorted.map(d => d.midnight_rentals),
+    marker: { color: colors },
+    hovertemplate: '%{x}<br>Midnight rentals: %{y:,}<extra></extra>'
+  }], {
+    xaxis: { title: 'Day of Week' },
+    yaxis: { title: 'Midnight Rentals', tickformat: ',.0f' },
+    margin: { t: 10, r: 10, b: 60, l: 80 },
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent'
+  }, { responsive: true });
+}
+
+function initNightlifeMap() {
+  const map = L.map('nightlife-map').setView([51.515, -0.1], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 18
+  }).addTo(map);
+
+  const max = Math.max(...DATA.nightlife_stations.map(s => s.total_nightlife_departures));
+  DATA.nightlife_stations.forEach((s, i) => {
+    if (!s.latitude || !s.longitude) return;
+    const r = 8 + (s.total_nightlife_departures / max) * 18;
+    L.circleMarker([s.latitude, s.longitude], {
+      radius: r, fillColor: '#6c3483', color: '#d7bde2',
+      weight: 1.5, fillOpacity: 0.85
+    }).addTo(map).bindPopup(`
+      <strong>#${i+1} ${s.station_name}</strong><br>
+      Nightlife departures: ${s.total_nightlife_departures.toLocaleString()}<br>
+      Avg trip: ${s.avg_duration_min} min
+    `);
+  });
+}
+
+// ── CH5: BIKE RISK ──
+let bikeData = [], sortCol = 1, sortAsc = false, riskFilter = 'all', searchVal = '';
+
+function initBikeChart() {
+  bikeData = DATA.bikes;
+  const high = bikeData.filter(b => b.is_high_risk_no_maintenance);
+  const over = bikeData.filter(b => b.exceeds_retirement_threshold && !b.is_high_risk_no_maintenance);
+  const safe = bikeData.filter(b => !b.exceeds_retirement_threshold);
+
+  const makeTrace = (arr, name, color, sym) => ({
+    x: arr.map(b => b.total_rentals),
+    y: arr.map(b => b.total_hours_ridden),
+    mode: 'markers', type: 'scatter', name,
+    text: arr.map(b => `Bike ${b.bike_id}`),
+    marker: { color, size: 6, symbol: sym, opacity: 0.7 },
+    hovertemplate: '%{text}<br>Rentals: %{x:,}<br>Hours: %{y:,.0f}<extra></extra>',
+    customdata: arr.map(b => b.bike_id)
+  });
+
+  Plotly.newPlot('bike-chart', [
+    makeTrace(safe, 'Safe', '#27ae60', 'circle'),
+    makeTrace(over, 'Over threshold', '#f39c12', 'triangle-up'),
+    makeTrace(high, 'High risk — no maintenance', '#e74c3c', 'x'),
+  ], {
+    xaxis: { title: 'Total Rentals', tickformat: ',.0f' },
+    yaxis: { title: 'Total Hours Ridden', tickformat: ',.0f' },
+    legend: { orientation: 'h', y: -0.2 },
+    margin: { t: 10, r: 20, b: 80, l: 80 },
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent'
+  }, { responsive: true });
+
+  document.getElementById('bike-chart').on('plotly_click', d => {
+    const id = String(d.points[0].customdata);
+    document.getElementById('bike-search').value = id;
+    filterTable();
+  });
+
+  renderTable();
+}
+
+function renderTable() {
+  let rows = [...bikeData];
+  if (riskFilter === 'high') rows = rows.filter(b => b.is_high_risk_no_maintenance);
+  if (searchVal) rows = rows.filter(b => String(b.bike_id).includes(searchVal));
+
+  rows.sort((a, b) => {
+    const cols = ['bike_id','total_rentals','total_hours_ridden','avg_rentals_per_day','active_lifespan_days'];
+    const key = cols[sortCol];
+    return sortAsc ? (a[key] > b[key] ? 1 : -1) : (a[key] < b[key] ? 1 : -1);
+  });
+
+  const tbody = document.getElementById('risk-tbody');
+  tbody.innerHTML = rows.slice(0, 50).map(b => {
+    const cls = b.is_high_risk_no_maintenance ? 'high-risk' : b.exceeds_retirement_threshold ? 'over-threshold' : '';
+    const badge = b.is_high_risk_no_maintenance
+      ? '<span class="badge red">High Risk</span>'
+      : b.exceeds_retirement_threshold
+        ? '<span class="badge yellow">Over Threshold</span>'
+        : '<span class="badge green">Safe</span>';
+    return `<tr class="${cls}">
+      <td><strong>${b.bike_id}</strong></td>
+      <td>${(b.total_rentals||0).toLocaleString()}</td>
+      <td>${(b.total_hours_ridden||0).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+      <td>${(b.avg_rentals_per_day||0).toFixed(2)}</td>
+      <td>${(b.active_lifespan_days||0).toLocaleString()}</td>
+      <td>${b.has_workshop_record ? '✅ Yes' : '❌ No'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable() {
+  searchVal = document.getElementById('bike-search').value.trim();
+  renderTable();
+}
+
+function filterRisk(mode) { riskFilter = mode; renderTable(); }
+
+function sortTable(col) {
+  sortAsc = (col === sortCol) ? !sortAsc : false;
+  sortCol = col; renderTable();
+}
+
+// ── INIT ALL ──
+window.addEventListener('load', () => {
+  showDemand('Weekday');
+  initStationMap();
+  initSeasonalChart();
+  initNightlifeChart();
+  initNightlifeMap();
+  initBikeChart();
+});
+</script>
+</body>
+</html>
